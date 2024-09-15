@@ -1,62 +1,36 @@
 #!/usr/bin/python3
-"""
-Script to query a list of all hot posts on a given Reddit subreddit.
-"""
+"""Module that recursively checks for pagination"""
 
 import requests
 
 
-def recurse(subreddit, hot_list=[], after="", count=0):
+def recurse(subreddit, hot_list=[], after=None):
     """
-    Recursively retrieves a list of titles of all hot posts
-    on a given subreddit.
-
-    Args:
-        subreddit (str): The name of the subreddit.
-        hot_list (list, optional): List to store the post titles.
-                                    Default is an empty list.
-        after (str, optional): Token used for pagination.
-                                Default is an empty string.
-        count (int, optional): Current count of retrieved posts. Default is 0.
-
-    Returns:
-        list: A list of post titles from the hot section of the subreddit.
+       Takes in a subreddit and recursively goes through
+       large data using pagination and recursion
     """
-    # Construct the URL for the subreddit's hot posts in JSON format
-    url = "https://www.reddit.com/r/{}/hot/.json".format(subreddit)
+    url = f'https://www.reddit.com/r/{subreddit}/hot.json'
+    header = {"User-Agent": "Chrome"}
+    params = {"limit": 100, "after": after}
 
-    # Define headers for the HTTP request, including User-Agent
-    headers = {
-        "User-Agent": "linux:0x16.api.advanced:v1.0.0 (by /u/bdov_)"
-    }
+    try:
+        response = requests.get(url, headers=header, params=params)
+        response.raise_for_status()
 
-    # Define parameters for the request, including pagination and limit
-    params = {
-        "after": after,
-        "count": count,
-        "limit": 100
-    }
+        data = response.json()
 
-    # Send a GET request to the subreddit's hot posts page
-    response = requests.get(url, headers=headers, params=params,
-                            allow_redirects=False)
+        posts = data["data"]["children"]
 
-    # Check if the response status code indicates a not-found error (404)
-    if response.status_code == 404:
+        if not posts:
+            return None
+        for post in posts:
+            title = post["data"]["title"]
+            hot_list.append(title)
+
+        next_page = data["data"]["after"]
+        if next_page:
+            return recurse(subreddit, hot_list, after=next_page)
+        else:
+            return hot_list
+    except requests.exceptions.RequestException:
         return None
-    # Parse the JSON response and extract relevant data
-    results = response.json().get("data")
-    after = results.get("after")
-    count += results.get("dist")
-
-    # Append post titles to the hot_list
-    for c in results.get("children"):
-        hot_list.append(c.get("data").get("title"))
-
-    # If there are more posts to retrieve, recursively call the function
-    if after is not None:
-        return recurse(subreddit, hot_list, after, count)
-
-    # Return the final list of hot post titles
-    return hot_list
-
