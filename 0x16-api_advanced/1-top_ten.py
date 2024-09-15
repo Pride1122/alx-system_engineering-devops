@@ -1,38 +1,27 @@
 #!/usr/bin/python3
-"""
-Module for interacting with the Reddit API and printing titles of
-the first 10 hot posts for a given subreddit.
-"""
+"""Module that prints title of hot subbreddit"""
 
 import requests
 
 
 def top_ten(subreddit):
-    """
-    Print the titles of the first 10 hot posts for a given
-    subreddit using the Reddit API.
-
-    Args:
-        subreddit (str): The name of the subreddit.
-
-    Returns:
-        None
-    """
-    if subreddit is None or not isinstance(subreddit, str):
-        print("None")
-
-    user_agent = {'User-agent': 'Google Chrome Version 81.0.4044.129'}
+    """Takes in a subreddit and prints the top hot"""
+    url = f'https://www.reddit.com/r/{subreddit}/hot.json'
     params = {'limit': 10}
-    url = 'https://www.reddit.com/r/{}/hot/.json'.format(subreddit)
-
-    response = get(url, headers=user_agent, params=params)
-    results = response.json()
-
+    header = {'User-agent': 'Chrome'}
     try:
-        my_data = results.get('data').get('children')
+        response = requests.get(url, headers=header, params=params)
+        response.raise_for_status()
 
-        for i in my_data:
-            print(i.get('data').get('title'))
+        data = response.json()
+        posts = data["data"]["children"]
 
-    except Exception:
+        if not posts:
+            print("None")
+        else:
+            for post in posts:
+                title = post["data"]["title"]
+                print(title)
+
+    except requests.exceptions.RequestException:
         print("None")
